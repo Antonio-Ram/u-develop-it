@@ -1,11 +1,11 @@
+//import mysql - modularized the code to connection.js
+//import connection.js
+const db = require('./db/connection');
 
-const mysql = require('mysql2');
+//import apiRoutes
+const apiRoutes = require('./routes/apiRoutes');
 
 const express = require('express');
-
-const inputCheck = require('./utils/inputCheck');
-const req = require('express/lib/request');
-const res = require('express/lib/response');
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -14,61 +14,18 @@ const app = express();
 app.use(express.urlencoded({ extended: false}));
 app.use(express.json());
 
-//Connect to database
-const db = mysql.createConnection(
-    {
-        host: 'localhost',
-        //Your MySQL username,
-        user:'root',
-        //Your MySQL password
-        password:'Theprotigy15!',
-        database: 'election'
-    },
-    console.log('Connected to the election database.')
-);
+//Use apiRoutes
+app.use('/api', apiRoutes);
 
-//GET all candidates
-app.get('/api/candidates', (req, res) => {
-    const sql = `SELECT candidates.*, parties.name
-    AS party_name
-    FROM candidates
-    LEFT JOIN parties
-    ON candidates .party_id = parties.id`;
+//Connect to database - modularized the code to connection.js
 
-    db.query(sql, (err, rows) => {
-        if(err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: 'success',
-            data: rows
-        });
-    });
-});
+//GET all candidates - modularized the code to candidateRoutes.js
+//app.get('/api/candidates', (req, res) => {
+//});
 
-//GET a single candidate
-app.get('/api/candidate/:id', (req, res) => {
-    const sql = `SELECT candidates.*, parties.name
-    AS party_name
-    FROM candidates
-    LEFT JOIN parties
-    ON candidates.party_id = parties.id
-    WHERE candidates.id = ?`;
-
-    const params = [req.params.id];
-
-    db.query(sql, params, (err, row) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: 'success',
-            data: row
-        });
-    });
-});
+//GET a single candidate - modularized the code to candidatedRoutes.js
+//app.get('/api/candidate/:id', (req, res) => {
+//});
 /*db.query(`SELECT * FROM candidates WHERE id = 1`, (err, row) => {
     if (err) {
         console.log(err);
@@ -76,27 +33,9 @@ app.get('/api/candidate/:id', (req, res) => {
     console.log(row);
 });*/
 
-//Delete a candidate
-app.delete('/api/candidate/:id', (req, res) => {
-    const sql = `DELETE FROM candidates  WHERE id = ?`;
-    const params = [req.params.id];
-
-    db.query(sql, params, (err, result) => {
-        if (err) {
-            res.statusMessage(400).json({ error: res.message });
-        } else if (!result.affectedRows) {
-            res.json({
-                message: 'Candidate not found'
-            });
-        }else {
-            res.json({
-                message: 'deleted',
-                changes: result.affectedRows,
-                id: req.params.id
-            });
-        }
-    });
-});
+//Delete a candidate - modularized the code to candidateRoutes.js
+//app.delete('/api/candidate/:id', (req, res) => {
+//});
 /*db.query(`DELETE FROM candidates WHERE id = ?`, 1, (err, result) => {
     if (err) {
         console.log(err);
@@ -104,28 +43,9 @@ app.delete('/api/candidate/:id', (req, res) => {
     console.log(result);
 });*/
 
-//Create a candidate
-app.post('/api/candidate', ({ body }, res) => {
-    const errors = inputCheck(body, 'first_name', 'industry_connected');
-    if (errors) {
-        res.status(400).json({ error: errors });
-        return;
-    }
-    const sql = `INSERT INTO candidates (first_name, last_name, industry_connected)
-        VALUES (?,?,?)`;
-    const params = [body.first_name, body.last_name, body.industry_connected];
-
-    db.query(sql, params, (err, result) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: 'successs',
-            data: body
-        });
-    });
-});
+//Create a candidate - modularized the code to candidateRoutes.js
+//app.post('/api/candidate', ({ body }, res) => {
+//});
 /*const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected)
     VALUES (?,?,?,?)`;
 const params = [1, 'Ronald', 'Firbank', 1];
@@ -137,94 +57,36 @@ db.query(sql, params, (err, result) => {
     console.log(result);
 });*/
 
-//Update a candidate's party
-app.put('/api/candidate/:id', (req, res) => {
-    const errors = inputCheck(req.body, 'party_id');
+//Update a candidate's party - modularized the code to candidateRoutes.js
+//app.put('/api/candidate/:id', (req, res) => {
+//});
 
-    if (errors) {
-    res.status(400).json({ error: errors });
-    return;
-}
+//GET all parties - moved to partyRoutes.js
+//app.get('/api/parties', (req, res) => {
+//});
 
-    const sql = `UPDATE candidates SET party_id = ?
-    WHERE id = ?`;
-    const params = [req.body.party_id, req.params.id];
-    db.query(sql, params, (err, result) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            //check if a recond was found
-        }else if (!result.affectedRows) {
-            res.json({
-                message: 'Candidate not found'
-            });
-        }else {
-            res.json({
-                message: 'success',
-                data: req.body,
-                changes: result.affectedRows
-            });
-        }
-    });
-});
-
-//GET all parties
-app.get('/api/parties', (req, res) => {
-    const sql = `SELECT *FROM parties`;
-    db.query(sql, (err, rows) => {
-        if (err) {
-            res.status(500).json({ error:err.message });
-            return;
-        }
-        res.json({
-            message: 'success',
-            data:rows
-        });
-    });
-});
- //GET a single party
- app.get('/api/party/:id', (req, res) => {
-     const sql = `SELECT * FROM parties WHERE id = ?`;
-     const params = [req.params.id];
-     db.query(sql, params, (err, row) => {
-         if (err) {
-             res.status(400).json({ error: err.message });
-             return;
-         }
-         res.json({
-             message: 'success',
-             data: row
-         });
-     });
- });
+ //GET a single party - moved to partyRoutes.js
+// app.get('/api/party/:id', (req, res) => {
+// });
 
 
- //Delete a party
- app.delete('/api/party/:id', (req, res) => {
-     const sql = `DELETE FROM parties WHERE id = ?`;
-     const params = [req.params.id];
-     db.query(sql,params, (err, result) => {
-         if (err) {
-             res.status(400).json({ error: res.message });
-             //checks if anything was deleted
-         }else if (!result.affectedRows) {
-             res.json({
-                 message: 'Party not found'
-             });
-         }else {
-             res.json({
-                 message: 'deleted',
-                 changes: result.affectedRows,
-                 id: req.params.id
-             });
-         }
-     });
- });
+ //Delete a party - moved to partyRoutes.js
+ //app.delete('/api/party/:id', (req, res) => {
+// });
 
 //Default response for any other request (Not Found)
 app.use((req, res) => {
     res.status(404).end();
 });
 
-app.listen(PORT, () =>{
-    console.log(`Server is running on port ${PORT}`);
+//Start server after DB connection
+db.connect(err => {
+    if (err) throw err;
+    console.log('Databaseconnected.');
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
 });
+/*app.listen(PORT, () =>{
+    console.log(`Server is running on port ${PORT}`);
+});*/
